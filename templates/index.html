@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionFit</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: white; display: flex; height: 100vh; margin: 0; }
+        
+        /* Layout: Video on Left, Stats on Right */
+        .main-container { display: flex; width: 100%; }
+        
+        .video-section { flex: 3; display: flex; justify-content: center; align-items: center; background: #000; }
+        .stats-section { flex: 1; padding: 40px; background: #1e1e1e; border-left: 2px solid #333; display: flex; flex-direction: column; justify-content: center; }
+
+        img { width: 100%; max-height: 90vh; object-fit: contain; }
+
+        .stat-box { margin-bottom: 40px; text-align: center; }
+        .label { font-size: 1.2rem; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+        .value { font-size: 4rem; font-weight: bold; margin-top: 10px; }
+        
+        #reps-val { color: #4CAF50; }
+        #form-val { font-size: 2rem; color: #FF5252; } /* Default Red */
+        
+        .good-form { color: #4CAF50 !important; }
+        .bad-form { color: #FF5252 !important; }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="video-section">
+            <img src="{{ url_for('video_feed') }}" alt="Stream">
+        </div>
+
+        <div class="stats-section">
+            <div class="stat-box">
+                <div class="label">Total Reps</div>
+                <div class="value" id="reps-val">0</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="label">Current State</div>
+                <div class="value" id="state-val" style="font-size: 2rem; color: #2196F3;">Ready</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="label">Form Feedback</div>
+                <div class="value bad-form" id="form-val">Analyzing...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Poll the server every 100ms
+        setInterval(async () => {
+            const response = await fetch('/status');
+            const data = await response.json();
+
+            // Update DOM
+            document.getElementById('reps-val').innerText = data.reps;
+            document.getElementById('state-val').innerText = data.state;
+            
+            const formElem = document.getElementById('form-val');
+            formElem.innerText = data.form;
+
+            // Change color based on form
+            if (data.form === "Good Form") {
+                formElem.classList.remove('bad-form');
+                formElem.classList.add('good-form');
+            } else {
+                formElem.classList.remove('good-form');
+                formElem.classList.add('bad-form');
+            }
+        }, 100);
+    </script>
+</body>
+</html>
