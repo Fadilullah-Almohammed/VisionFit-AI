@@ -27,38 +27,44 @@ Open your terminal or command prompt and run:
 ```bash
 git clone [https://github.com/YOUR_USERNAME/VisionFit.git](https://github.com/YOUR_USERNAME/VisionFit.git)
 cd VisionFit
-2. Create a Virtual Environment
+```
+### 2. Create a Virtual Environment
 It is highly recommended to use a virtual environment to keep dependencies isolated.
 
 For Windows:
 
-Bash
+```Bash
 # Create the environment
 python -m venv .venv
 
 # Activate the environment
 .venv\Scripts\activate
+```
 For macOS / Linux:
 
-Bash
+```Bash
 # Create the environment
 python3 -m venv .venv
 
 # Activate the environment
 source .venv/bin/activate
+```
 You will know it worked if you see (.venv) appear at the start of your terminal line.
 
-3. Install Dependencies
+### 3. Install Dependencies
 Install all required libraries (Flask, OpenCV, MediaPipe, etc.) using pip:
 
-Bash
+```Bash
 pip install -r requirements.txt
-🎮 How to Run
+```
+##@ 4. How to Run
+
 Start the Application:
 Make sure your virtual environment is activated, then run:
 
-Bash
+```Bash
 python app.py
+```
 Open the Dashboard:
 You will see a message saying Running on http://127.0.0.1:5000.
 Open your web browser and navigate to:
