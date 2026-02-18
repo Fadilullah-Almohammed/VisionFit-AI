@@ -1,76 +1,69 @@
 import cv2
 import yt_dlp
-from flask import Flask, render_template, Response, jsonify
-from pose_module import PoseDetector
-from yolo_pose_module import YoloPoseDetector
-
+from flask import Flask, render_template, Response, jsonify, request
+# Select your preferred module: 'pose_module' OR 'yolo_pose_module'
+from pose_module import PoseDetector 
 
 app = Flask(__name__)
 
-# --- 1. CONFIGURATION ---
-YOUTUBE_URL = "https://youtu.be/IODxDxX7oi4?si=U_ffgfHIppsMj2BA" # Perfect Pushup
-START_TIME = 100   # Start at 45 seconds
-END_TIME = 300     # End at 55 seconds (Loop back to 45)
+# --- GLOBAL SETTINGS ---
+current_config = {
+    "mode": "webcam",  # 'webcam' or 'youtube'
+    "url": None,
+    "start": 0,
+    "end": 0
+}
 
-# --- 2. YOUTUBE EXTRACTOR ---
-def get_youtube_stream_url(url):
+detector = PoseDetector()
+
+def get_youtube_stream(url):
     ydl_opts = {'format': 'best[ext=mp4]', 'quiet': True}
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             return info['url']
-    except Exception as e:
-        print(f"❌ Error getting YouTube URL: {e}")
+    except:
         return None
 
-# Get video stream
-print(f"🚀 Extracting YouTube Stream...")
-video_path = get_youtube_stream_url(YOUTUBE_URL)
-
-if video_path is None:
-    print("⚠️ YouTube failed. Using Webcam.")
-    video_path = 0 
-
-# --- 3. GLOBAL OBJECTS ---
-detector = PoseDetector()
-
-# detector = YoloPoseDetector()
-
 def generate_frames():
-    cap = cv2.VideoCapture(video_path)
-    
-    # JUMP TO START immediately
-    cap.set(cv2.CAP_PROP_POS_MSEC, START_TIME * 1000)
+    # 1. SETUP SOURCE
+    if current_config["mode"] == "youtube" and current_config["url"]:
+        src = get_youtube_stream(current_config["url"])
+        cap = cv2.VideoCapture(src if src else 0)
+        # Jump to start
+        cap.set(cv2.CAP_PROP_POS_MSEC, current_config["start"] * 1000)
+    else:
+        cap = cv2.VideoCapture(0)
 
     while True:
         success, frame = cap.read()
-        
         if not success:
-            # If video ends naturally, loop back to start time
-            cap.set(cv2.CAP_PROP_POS_MSEC, START_TIME * 1000)
-            continue
+            if current_config["mode"] == "youtube":
+                # Loop video
+                cap.set(cv2.CAP_PROP_POS_MSEC, current_config["start"] * 1000)
+                continue
+            else:
+                break
+        
+        # Check End Time (for YouTube)
+        if current_config["mode"] == "youtube" and current_config["end"] > 0:
+            current_pos = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
+            if current_pos >= current_config["end"]:
+                cap.set(cv2.CAP_PROP_POS_MSEC, current_config["start"] * 1000)
 
-        # --- TIME CHECK LOOP ---
-        current_time = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
-        
-        if current_time >= END_TIME:
-            # Reached end of clip? Rewind!
-            cap.set(cv2.CAP_PROP_POS_MSEC, START_TIME * 1000)
-            continue
-        
-        # --- AI PROCESSING ---
-        # No flip needed for YouTube
+        # 2. AI PROCESSING
+        # Flip only if webcam
+        if current_config["mode"] == "webcam":
+            frame = cv2.flip(frame, 1)
+            
         frame = detector.process_frame(frame)
-        
-        # --- ENCODE ---
+
+        # 3. STREAM
         ret, buffer = cv2.imencode('.jpg', frame)
         if not ret: continue
-        frame_bytes = buffer.tobytes()
-        
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
 
-# --- 4. FLASK ROUTES ---
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -86,6 +79,15 @@ def status():
         'state': detector.feedback,
         'form': detector.form_feedback
     })
+
+@app.route('/set_mode', methods=['POST'])
+def set_mode():
+    data = request.json
+    current_config["mode"] = data.get("mode")
+    current_config["url"] = data.get("url")
+    current_config["start"] = int(data.get("start", 0))
+    current_config["end"] = int(data.get("end", 0))
+    return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
     app.run(debug=True)

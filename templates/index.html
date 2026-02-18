@@ -1,78 +1,354 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="dark" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VisionFit</title>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>VisionFit Professional</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#3c3cf6",
+                        "primary-dark": "#2a2abf",
+                        "background-dark": "#18181b", 
+                        "surface-dark": "#27272a", 
+                        "surface-glass": "rgba(39, 39, 42, 0.6)",
+                    },
+                    fontFamily: { sans: ["Inter", "sans-serif"] },
+                    boxShadow: { 'glow': '0 0 20px -5px rgba(60, 60, 246, 0.5)' }
+                },
+            },
+        }
+    </script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #121212; color: white; display: flex; height: 100vh; margin: 0; }
-        
-        /* Layout: Video on Left, Stats on Right */
-        .main-container { display: flex; width: 100%; }
-        
-        .video-section { flex: 3; display: flex; justify-content: center; align-items: center; background: #000; }
-        .stats-section { flex: 1; padding: 40px; background: #1e1e1e; border-left: 2px solid #333; display: flex; flex-direction: column; justify-content: center; }
-
-        img { width: 100%; max-height: 90vh; object-fit: contain; }
-
-        .stat-box { margin-bottom: 40px; text-align: center; }
-        .label { font-size: 1.2rem; color: #888; text-transform: uppercase; letter-spacing: 2px; }
-        .value { font-size: 4rem; font-weight: bold; margin-top: 10px; }
-        
-        #reps-val { color: #4CAF50; }
-        #form-val { font-size: 2rem; color: #FF5252; } /* Default Red */
-        
-        .good-form { color: #4CAF50 !important; }
-        .bad-form { color: #FF5252 !important; }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.85); /* Darker for readability */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* Hide Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
     </style>
 </head>
-<body>
 
-    <div class="main-container">
-        <div class="video-section">
-            <img src="{{ url_for('video_feed') }}" alt="Stream">
-        </div>
+<body class="bg-background-dark text-white h-screen overflow-hidden flex selection:bg-primary selection:text-white">
 
-        <div class="stats-section">
-            <div class="stat-box">
-                <div class="label">Total Reps</div>
-                <div class="value" id="reps-val">0</div>
-            </div>
-
-            <div class="stat-box">
-                <div class="label">Current State</div>
-                <div class="value" id="state-val" style="font-size: 2rem; color: #2196F3;">Ready</div>
-            </div>
-
-            <div class="stat-box">
-                <div class="label">Form Feedback</div>
-                <div class="value bad-form" id="form-val">Analyzing...</div>
+    <aside class="w-24 h-full flex flex-col items-center py-8 border-r border-white/5 bg-[#141417] z-20">
+        <div class="mb-12">
+            <div class="w-12 h-12 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center shadow-glow">
+                <span class="material-symbols-outlined text-white text-3xl">fitness_center</span>
             </div>
         </div>
-    </div>
+        <nav class="flex-1 flex flex-col gap-8 w-full px-4 items-center">
+            <a class="group flex items-center justify-center w-12 h-12 rounded-2xl bg-primary text-white shadow-glow transition-all" href="#">
+                <span class="material-symbols-outlined filled">dashboard</span>
+            </a>
+            <a class="group flex items-center justify-center w-12 h-12 rounded-2xl text-zinc-400 hover:text-white hover:bg-white/5 transition-all" href="#">
+                <span class="material-symbols-outlined">bar_chart</span>
+            </a>
+        </nav>
+        <div class="mt-auto">
+            <button class="w-12 h-12 rounded-full overflow-hidden border-2 border-zinc-700 hover:border-zinc-500 transition-colors">
+                <div class="w-full h-full bg-zinc-600 flex items-center justify-center text-xs">IMG</div>
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        
+        <header class="h-24 flex items-center justify-between px-10 border-b border-white/5 z-20">
+            <div>
+                <h1 class="text-xl font-medium tracking-tight text-zinc-100">Workout Analysis</h1>
+                <p class="text-sm text-zinc-500">AI Trainer Ready</p>
+            </div>
+            
+            <div class="bg-black/30 p-1.5 rounded-full flex items-center shadow-inner border border-white/5">
+                <button id="btn-mode-live" onclick="switchTab('webcam')" class="px-6 py-2 rounded-full text-zinc-400 hover:text-white transition-all text-sm font-medium">
+                    Live Camera
+                </button>
+                <button id="btn-mode-yt" onclick="switchTab('youtube')" class="px-6 py-2 rounded-full bg-surface-dark text-white shadow-sm transition-all text-sm font-medium border border-white/5">
+                    YouTube
+                </button>
+            </div>
+
+            <div class="w-32 flex justify-end">
+                <button class="flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                    <span class="material-symbols-outlined text-lg">logout</span> Exit
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 p-8 flex items-center justify-center overflow-y-auto relative">
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+            
+            <div class="w-full max-w-5xl aspect-video rounded-3xl relative overflow-hidden shadow-glass border border-white/10 group bg-black">
+                
+                <img id="video-feed" class="w-full h-full object-contain" src="{{ url_for('video_feed') }}" />
+                
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none"></div>
+
+                <div id="yt-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-30 transition-all duration-500">
+                    <div class="glass-panel p-8 rounded-3xl w-full max-w-lg flex flex-col gap-6 shadow-2xl">
+                        <div class="flex flex-col gap-2 text-center">
+                            <h2 class="text-2xl font-semibold text-white">Load Workout</h2>
+                            <p class="text-zinc-400">Paste a YouTube URL to begin analysis</p>
+                        </div>
+                        
+                        <div class="flex flex-col gap-4">
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">link</span>
+                                <input id="yt-url" type="text" placeholder="https://youtube.com/watch?v=..." class="w-full bg-black/30 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="relative w-1/3">
+                                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">schedule</span>
+                                    <input id="yt-start" type="number" placeholder="Start (s)" class="w-full bg-black/30 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                                </div>
+                                <div class="relative w-1/3">
+                                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">stop_circle</span>
+                                    <input id="yt-end" type="number" placeholder="End (s)" class="w-full bg-black/30 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
+                                </div>
+                                <button id="btn-load" onclick="startYoutube()" class="flex-1 bg-primary hover:bg-primary-dark text-white font-medium rounded-xl transition-all shadow-glow flex items-center justify-center gap-2">
+                                    Start
+                                    <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div> 
+
+                <div class="absolute top-6 left-6 flex gap-3 pointer-events-none">
+                    <span id="badge-live" class="hidden px-3 py-1 bg-red-500/90 text-white text-xs font-bold uppercase tracking-wider rounded-md backdrop-blur-sm flex items-center gap-1.5 shadow-lg">
+                        <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span> Live
+                    </span>
+                    <span id="badge-yt" class="px-3 py-1 bg-blue-600/90 text-white text-xs font-bold uppercase tracking-wider rounded-md backdrop-blur-sm flex items-center gap-1.5 shadow-lg">
+                        <span class="material-symbols-outlined text-[14px]">play_circle</span> Replay
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <aside class="w-[360px] bg-[#141417] border-l border-white/5 flex flex-col h-full overflow-hidden shadow-2xl z-30">
+        <div class="p-6 pb-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-6">Real-time Metrics</h2>
+            
+            <div class="flex flex-col items-center justify-center py-6 relative">
+                <div class="relative w-48 h-48">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="96" cy="96" fill="none" r="88" stroke="#27272a" stroke-width="12"></circle>
+                        <circle id="rep-progress" class="transition-all duration-500 ease-out shadow-[0_0_15px_rgba(60,60,246,0.5)]" 
+                                cx="96" cy="96" fill="none" r="88" stroke="#3c3cf6" 
+                                stroke-dasharray="552" stroke-dashoffset="552" stroke-linecap="round" stroke-width="12"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="rep-count" class="text-6xl font-bold text-white tracking-tighter">0</span>
+                        <span class="text-sm font-medium text-zinc-400 uppercase tracking-widest mt-1">Reps</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 w-full mt-8">
+                <div class="bg-surface-dark rounded-2xl p-4 flex flex-col items-center border border-white/5">
+                    <span class="text-xs text-zinc-400 uppercase font-medium">State</span>
+                    <div class="flex items-end gap-1 mt-1">
+                        <span id="status-text" class="text-xl font-bold text-white">Ready</span>
+                    </div>
+                </div>
+                <div class="bg-surface-dark rounded-2xl p-4 flex flex-col items-center border border-white/5">
+                    <span class="text-xs text-zinc-400 uppercase font-medium">Quality</span>
+                    <div class="flex items-end gap-1 mt-1">
+                        <span id="quality-score" class="text-xl font-bold text-zinc-400">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-6 pb-6 mt-2">
+            <h3 class="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-4 sticky top-0 bg-[#141417] py-2 z-10">Form Feedback</h3>
+            
+            <div id="feedback-list" class="flex flex-col gap-3">
+                <div class="p-4 rounded-xl bg-surface-dark border border-white/5 flex gap-3 items-center opacity-50">
+                    <span class="material-symbols-outlined text-zinc-500">info</span>
+                    <p class="text-sm text-zinc-500">Waiting for exercise...</p>
+                </div>
+            </div>
+        </div>
+    </aside>
 
     <script>
-        // Poll the server every 100ms
-        setInterval(async () => {
-            const response = await fetch('/status');
-            const data = await response.json();
+        // -- DOM ELEMENTS --
+        const videoFeed = document.getElementById('video-feed');
+        const ytOverlay = document.getElementById('yt-overlay');
+        const repDisplay = document.getElementById('rep-count');
+        const repProgress = document.getElementById('rep-progress');
+        const statusText = document.getElementById('status-text');
+        const qualityScore = document.getElementById('quality-score');
+        const feedbackList = document.getElementById('feedback-list');
+        
+        // Buttons
+        const btnLive = document.getElementById('btn-mode-live');
+        const btnYt = document.getElementById('btn-mode-yt');
+        const btnLoad = document.getElementById('btn-load');
 
-            // Update DOM
-            document.getElementById('reps-val').innerText = data.reps;
-            document.getElementById('state-val').innerText = data.state;
-            
-            const formElem = document.getElementById('form-val');
-            formElem.innerText = data.form;
+        // Inputs
+        const inputUrl = document.getElementById('yt-url');
+        const inputStart = document.getElementById('yt-start');
+        const inputEnd = document.getElementById('yt-end');
 
-            // Change color based on form
-            if (data.form === "Good Form") {
-                formElem.classList.remove('bad-form');
-                formElem.classList.add('good-form');
+        // State Trackers
+        let currentMode = 'youtube'; // Default
+        let lastFeedback = "";
+
+        // -- CIRCLE PROGRESS HELPER --
+        // Circumference = 2 * pi * r (88) ≈ 552
+        const CIRCUMFERENCE = 552;
+        function setProgress(percent) {
+            const offset = CIRCUMFERENCE - (percent / 100) * CIRCUMFERENCE;
+            repProgress.style.strokeDashoffset = offset;
+        }
+
+        // -- SWITCH TABS --
+        async function switchTab(mode) {
+            currentMode = mode;
+
+            // Visual Toggle
+            if (mode === 'webcam') {
+                // Style Active: Live
+                btnLive.className = "px-6 py-2 rounded-full bg-surface-dark text-white shadow-sm transition-all text-sm font-medium border border-white/5";
+                btnYt.className = "px-6 py-2 rounded-full text-zinc-400 hover:text-white transition-all text-sm font-medium";
+                
+                // Hide YT Overlay
+                ytOverlay.classList.add('opacity-0', 'pointer-events-none');
+                
+                // Badges
+                document.getElementById('badge-live').classList.remove('hidden');
+                document.getElementById('badge-yt').classList.add('hidden');
+
+                // Call Backend
+                await fetch('/set_mode', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mode: 'webcam' })
+                });
+                
+                // Refresh Stream
+                videoFeed.src = "{{ url_for('video_feed') }}?t=" + new Date().getTime();
+
             } else {
-                formElem.classList.remove('good-form');
-                formElem.classList.add('bad-form');
+                // Style Active: YouTube
+                btnYt.className = "px-6 py-2 rounded-full bg-surface-dark text-white shadow-sm transition-all text-sm font-medium border border-white/5";
+                btnLive.className = "px-6 py-2 rounded-full text-zinc-400 hover:text-white transition-all text-sm font-medium";
+                
+                // Show Overlay (User needs to enter URL)
+                ytOverlay.classList.remove('opacity-0', 'pointer-events-none');
+
+                // Badges
+                document.getElementById('badge-live').classList.add('hidden');
+                document.getElementById('badge-yt').classList.remove('hidden');
             }
-        }, 100);
+        }
+
+        // -- START YOUTUBE --
+        async function startYoutube() {
+            const url = inputUrl.value;
+            if(!url) return alert("Please paste a URL");
+
+            btnLoad.innerText = "Loading...";
+            
+            await fetch('/set_mode', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    mode: 'youtube',
+                    url: url,
+                    start: inputStart.value || 0,
+                    end: inputEnd.value || 0
+                })
+            });
+
+            // Refresh Stream
+            videoFeed.src = "{{ url_for('video_feed') }}?t=" + new Date().getTime();
+            
+            // Hide Overlay so we can see video
+            ytOverlay.classList.add('opacity-0', 'pointer-events-none');
+            btnLoad.innerHTML = 'Start <span class="material-symbols-outlined text-sm">arrow_forward</span>';
+        }
+
+        // -- POLLING DATA LOOP --
+        setInterval(async () => {
+            try {
+                const res = await fetch('/status');
+                const data = await res.json();
+
+                // 1. Update Reps
+                repDisplay.innerText = data.reps;
+                // Animate ring (arbitrary goal of 15 reps for visual)
+                let percent = Math.min((data.reps / 15) * 100, 100);
+                setProgress(percent);
+
+                // 2. Update Status
+                statusText.innerText = data.state;
+
+                // 3. Update Feedback Quality
+                const form = data.form;
+                const isGood = (form === "Good Form" || form === "Good Line");
+
+                if (isGood) {
+                    qualityScore.innerText = "A+";
+                    qualityScore.className = "text-xl font-bold text-green-400";
+                    repProgress.style.stroke = "#10b981"; // Green
+                } else {
+                    qualityScore.innerText = "C";
+                    qualityScore.className = "text-xl font-bold text-red-400";
+                    repProgress.style.stroke = "#ef4444"; // Red
+                }
+
+                // 4. Append New Feedback Card (Only if changed)
+                if (form !== "Good Form" && form !== lastFeedback) {
+                    lastFeedback = form;
+                    
+                    const card = document.createElement('div');
+                    card.className = "p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex gap-3 items-start animate-pulse";
+                    card.innerHTML = `
+                        <div class="mt-0.5 text-red-400"><span class="material-symbols-outlined text-[20px]">warning</span></div>
+                        <div>
+                            <p class="text-sm font-medium text-red-100">${form}</p>
+                            <p class="text-xs text-red-400/60 mt-0.5">Correction needed</p>
+                        </div>
+                    `;
+                    // Add to top
+                    feedbackList.prepend(card);
+                    
+                    // Keep list clean (max 5 items)
+                    if(feedbackList.children.length > 5) feedbackList.lastElementChild.remove();
+                } else if (isGood && lastFeedback !== "Good Form") {
+                    lastFeedback = "Good Form";
+                    // Add Success Card
+                    const card = document.createElement('div');
+                    card.className = "p-4 rounded-xl bg-green-500/10 border border-green-500/20 flex gap-3 items-start";
+                    card.innerHTML = `
+                        <div class="mt-0.5 text-green-400"><span class="material-symbols-outlined text-[20px]">check_circle</span></div>
+                        <div>
+                            <p class="text-sm font-medium text-green-100">Perfect Form</p>
+                        </div>
+                    `;
+                    feedbackList.prepend(card);
+                }
+
+            } catch (e) { console.log("Connection lost..."); }
+        }, 200);
+
     </script>
 </body>
 </html>

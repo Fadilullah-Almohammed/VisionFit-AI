@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from collections import deque
+import math
 
 class PoseDetector:
     def __init__(self):
@@ -25,12 +26,12 @@ class PoseDetector:
         a, b, c = np.array(a), np.array(b), np.array(c)
         radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
         angle = np.abs(radians * 180.0 / np.pi)
-        return 360 - angle if angle > 180 else angle
+        return angle
+
+    def get_distance(self, p1, p2):
+        return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
     def process_frame(self, frame):
-        # 1. Clear text from previous frame (We don't draw text on the image anymore!)
-        # We only draw the skeleton.
-        
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.pose.process(img_rgb)
 
@@ -41,49 +42,61 @@ class PoseDetector:
             def get_xy(idx):
                 return [landmarks[idx].x * w, landmarks[idx].y * h]
 
-            # Landmarks
-            l_shldr, r_shldr = get_xy(11), get_xy(12)
+            # --- 1. GET KEYPOINTS ---
+            l_shldr = get_xy(11)
             l_elbow = get_xy(13)
             l_wrist = get_xy(15)
-            l_hip = get_xy(23)
-            l_knee = get_xy(25)
-            nose = get_xy(0)
+            l_hip   = get_xy(23)
+            l_knee  = get_xy(25)
+            l_ear   = get_xy(7) # <--- NEW: Using Ear instead of Nose
 
-            # Angles
+            # --- 2. CALCULATE ANGLES ---
             arm_angle = self.calculate_angle(l_shldr, l_elbow, l_wrist)
             body_angle = self.calculate_angle(l_shldr, l_hip, l_knee)
             flare_angle = self.calculate_angle(l_hip, l_shldr, l_elbow)
-            neck_angle = self.calculate_angle(nose, l_shldr, l_hip)
+            
+            # Neck Angle: Ear - Shoulder - Hip
+            neck_angle = self.calculate_angle(l_ear, l_shldr, l_hip)
 
-            # Smoothing
+            # Fix Arm Angle
+            if arm_angle > 180: arm_angle = 360 - arm_angle
+
+            # Adaptive Metrics
+            torso_length = self.get_distance(l_shldr, l_hip)
+            wrist_shoulder_diff = abs(l_wrist[0] - l_shldr[0])
+
+            # --- 3. SMOOTHING ---
             self.arm_buffer.append(arm_angle)
             self.body_buffer.append(body_angle)
             self.flare_buffer.append(flare_angle)
             
-            # Use smoothed values
             s_arm = np.mean(self.arm_buffer)
             s_body = np.mean(self.body_buffer)
             s_flare = np.mean(self.flare_buffer)
 
-            # --- LOGIC ---
+            # --- 4. RELAXED LOGIC ---
             current_errors = []
             
-            if s_body < 160: current_errors.append("Lower Hips")
-            elif s_body > 200: current_errors.append("Hips Sagging")
+            if s_body < 145: current_errors.append("Lower Hips")
+            elif s_body > 210: current_errors.append("Hips Sagging")
             
-            if s_flare > 75: current_errors.append("Tuck Elbows")
+            if s_flare > 85: current_errors.append("Tuck Elbows")
             
-            if abs(l_wrist[0] - l_shldr[0]) > 70: current_errors.append("Hands Under Shoulders")
+            if wrist_shoulder_diff > (torso_length * 0.6): 
+                current_errors.append("Hands Under Shoulders")
             
-            if neck_angle < 150: current_errors.append("Head Too Low")
+            # FIX: Threshold relaxed to 120 (was 135)
+            # This allows looking down without flagging an error
+            if neck_angle < 120: 
+                current_errors.append("Head Too Low")
 
-            # Set Feedback
+            # --- 5. SET FEEDBACK ---
             if not current_errors:
                 self.form_feedback = "Good Form"
             else:
-                self.form_feedback = current_errors[0] # Show the most important error first
+                self.form_feedback = current_errors[0]
 
-            # Counting
+            # --- 6. REP COUNTING ---
             if s_arm > 160:
                 self.feedback = "Up"
                 if self.direction == 1:
@@ -99,7 +112,7 @@ class PoseDetector:
                 if s_arm < self.max_low_angle:
                     self.max_low_angle = s_arm
 
-            # Draw ONLY the Skeleton (No text)
+            # --- 7. DRAWING ---
             self.mp_draw.draw_landmarks(frame, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS)
 
         return frame
