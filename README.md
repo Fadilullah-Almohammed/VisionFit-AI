@@ -57,7 +57,7 @@ Install all required libraries (Flask, OpenCV, MediaPipe, etc.) using pip:
 ```Bash
 pip install -r requirements.txt
 ```
-##@ 4. How to Run
+### 4. How to Run
 
 Start the Application:
 Make sure your virtual environment is activated, then run:
